@@ -7,12 +7,10 @@ import org.springframework.web.servlet.HandlerInterceptor;
 
 @Component
 public class RateLimitInterceptor implements HandlerInterceptor {
+    private final RedisRateLimiterService redisRateLimiterService;
 
-    private final RateLimiterService rateLimiterService;
-
-    public RateLimitInterceptor() {
-        // 5 tokens capacity, refill 1 token/sec — same config as our earlier test
-        this.rateLimiterService = new RateLimiterService(5, 1);
+    public RateLimitInterceptor(RedisRateLimiterService redisRateLimiterService) {
+        this.redisRateLimiterService = redisRateLimiterService;
     }
 
     @Override
@@ -20,13 +18,13 @@ public class RateLimitInterceptor implements HandlerInterceptor {
         System.out.println("Interceptor hit!");
         String clientId = request.getRemoteAddr(); // client's IP address
 
-        boolean allowed = rateLimiterService.isAllowed(clientId);
+        boolean allowed = redisRateLimiterService.isAllowed(clientId);
 
         if (!allowed) {
             response.setStatus(429); // 429 Too Many Requests
-            response.setHeader("Retry-After", "1"); // suggest retry after 1 second
+            response.setHeader("Retry-After", "60"); // suggest retry after 60 second
             try {
-                response.getWriter().write("Too many requests. Please try again later.");
+                response.getWriter().write("Too many requests. Please try again later after 60 seconds .");
             } catch (Exception e) {
                 e.printStackTrace();
             }
